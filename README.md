@@ -1,5 +1,5 @@
 # Bad Words Filter
-###### Creating to help Go developers to filter bad words in phrases/comments/text context.
+###### Create to help Go developers to filter bad words in phrases/comments/text context.
 
 ## For Developers
 It would be nice if you want to contribute to this project. I really need your help, there are a lot of things to do.
