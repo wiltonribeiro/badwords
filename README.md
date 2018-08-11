@@ -65,7 +65,7 @@ cleanWith, _ := phrase.Clean()
 ##### return string, error
 Return the sentence with the bad words changed by the relative meaning(but polite) of each word found in the dataset.
 ```
-changedToBetter, err = phrase.ChangeToBetter()
+changedToBetter, _ = phrase.ChangeToBetter()
 ```
 ###### The `changedToBetter`(string) variable receive the new string.
 
@@ -73,7 +73,7 @@ changedToBetter, err = phrase.ChangeToBetter()
 ##### return float64, error
 Return the profanity level of the sentence. Each bad word has the own profanity level in the dataset. The result is the sum of each bad word level by the numbers of normal words.
 ```
-level, err := phrase.ProfanityLevel()
+level, _ := phrase.ProfanityLevel()
 ```
 ###### The `level`(float64) variable receive the level of profanity calculated.
 
