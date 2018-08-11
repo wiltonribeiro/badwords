@@ -18,15 +18,13 @@ type BadWordContent struct {
 type language struct {
 	Initial string `json:"initial"`
 	Name    string `json:"name"`
-	Words   []struct {
-		RelativeGood string `json:"relative_good"`
-		BadWord      string `json:"bad_word"`
-	} `json:"words"`
+	Words   []words
 }
 
 type words struct {
 	RelativeGood string `json:"relative_good"`
 	BadWord      string `json:"bad_word"`
+	ProfanityLevel int `json:"profanity_level"`
 }
 
 func (p BadWordContent) listLanguagesData() (content []string, err error){
@@ -55,7 +53,6 @@ func (p BadWordContent) CheckLanguageExits(lang string) (err error){
 }
 
 func (p BadWordContent) openFile(filename string, lang string) (data language, err error) {
-
 	err = p.CheckLanguageExits(lang)
 	if err != nil {
 		return
@@ -69,30 +66,44 @@ func (p BadWordContent) openFile(filename string, lang string) (data language, e
 	return
 }
 
+func checkOfPhrase(bw words, wordsPhrase []string, i int, w *[]words) {
+	separateBadWord := strings.Split(bw.BadWord," ")
+	flag := true
+	for x:=1; x<len(separateBadWord); x++  {
+		if separateBadWord[x] == wordsPhrase[i] {
+			i++
+		} else{
+			flag = false
+			break
+		}
+	}
+	if flag {
+		*w = append(*w, bw)
+	}
+}
+
+
 func (p BadWordContent) getWordsData(wordsPhrase []string, lang string, fileName string) (w []words, err error) {
 	langData, err := p.openFile(fileName, lang)
 	w = nil
-
-	for _,word := range wordsPhrase {
+	for i,word := range wordsPhrase {
 		for _, bw := range langData.Words {
 			if bw.BadWord == word {
 				w = append(w, bw)
+			} else if strings.Split(bw.BadWord," ")[0] == word {
+				checkOfPhrase(bw, wordsPhrase, i+1, &w)
 			}
 		}
 	}
-
 	return
 }
 
 func (p BadWordContent) Search() ([]string, error) {
-
 	words, err := p.getWordsData(prepare(p.Text), p.Lang, p.FileLocation)
-
 	var content []string
 	for _, word := range words {
 		content = append(content,word.BadWord)
 	}
-
 	return content , err
 }
 
@@ -116,5 +127,15 @@ func (p BadWordContent) CleanWith(value string) (phrase string, err error){
 	for _, badWord := range badWords {
 		phrase = strings.Replace(phrase,badWord,strings.Repeat(value,len(badWord)),-1)
 	}
+	return
+}
+
+func (p BadWordContent) ProfanityLevel() (level int, err error){
+	words, err := p.getWordsData(prepare(p.Text), p.Lang, p.FileLocation)
+	level = 0
+	for _, w := range words {
+		level += w.ProfanityLevel
+	}
+	level /= len(words)
 	return
 }
