@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 	"os"
-	"fmt"
 	"io/ioutil"
 	"errors"
 )
@@ -16,12 +15,13 @@ type BadWordContent struct {
 	FileLocation string
 }
 
-type languages struct {
-	Languages [][]struct {
-		Initial string `json:"initial"`
-		Name    string `json:"name"`
-		Words   []words `json:"words"`
-	} `json:"languages"`
+type language struct {
+	Initial string `json:"initial"`
+	Name    string `json:"name"`
+	Words   []struct {
+		RelativeGood string `json:"relative_good"`
+		BadWord      string `json:"bad_word"`
+	} `json:"words"`
 }
 
 type words struct {
@@ -29,17 +29,12 @@ type words struct {
 	BadWord      string `json:"bad_word"`
 }
 
-func openFile(filename string) languages{
-	var l languages
-	jsonFile, err := os.Open(filename)
-	defer jsonFile.Close()
-	if err != nil {
-		fmt.Println(err.Error())
+func (p BadWordContent) listLanguagesData() (content []string, err error){
+	files, err := ioutil.ReadDir(p.FileLocation+"/dataset")
+	for _, f := range files {
+		content = append(content,strings.Replace(f.Name(),".json","",-1))
 	}
-
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	json.Unmarshal(byteValue, &l)
-	return l
+	return
 }
 
 func prepare(phrase string) (separate[]string) {
@@ -49,9 +44,49 @@ func prepare(phrase string) (separate[]string) {
 	return
 }
 
+func (p BadWordContent) CheckLanguageExits(lang string) (err error){
+	languages, err := p.listLanguagesData()
+	for _, item := range languages {
+		if item == lang {
+			return
+		}
+	}
+	return errors.New("language not exist in dataset")
+}
+
+func (p BadWordContent) openFile(filename string, lang string) (data language, err error) {
+
+	err = p.CheckLanguageExits(lang)
+	if err != nil {
+		return
+	}
+
+	jsonFile, _ := os.Open(filename+"/dataset/"+lang+".json")
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	json.Unmarshal(byteValue, &data)
+	return
+}
+
+func (p BadWordContent) getWordsData(wordsPhrase []string, lang string, fileName string) (w []words, err error) {
+	langData, err := p.openFile(fileName, lang)
+	w = nil
+
+	for _,word := range wordsPhrase {
+		for _, bw := range langData.Words {
+			if bw.BadWord == word {
+				w = append(w, bw)
+			}
+		}
+	}
+
+	return
+}
+
 func (p BadWordContent) Search() ([]string, error) {
 
-	words, err := matchInJSON(prepare(p.Text), p.Lang, p.FileLocation)
+	words, err := p.getWordsData(prepare(p.Text), p.Lang, p.FileLocation)
 
 	var content []string
 	for _, word := range words {
@@ -61,35 +96,13 @@ func (p BadWordContent) Search() ([]string, error) {
 	return content , err
 }
 
-func matchInJSON(words []string, lang string, fileName string) (w []words, err error){
-	langs := openFile(fileName)
-	w, err = nil, nil
-
-	for _, item := range langs.Languages[0] {
-		if item.Initial == lang {
-			for _,word := range words {
-				for _, bw := range item.Words {
-					if bw.BadWord == word {
-						w = append(w, bw)
-					}
-				}
-			}
-		}
-	}
-
-	if w == nil {
-		err = errors.New("language not exist in json file")
-	}
-
-	return
-}
 
 func (p BadWordContent) Clean() (string, error){
 	return p.CleanWith("*")
 }
 
 func (p BadWordContent) ChangeToBetter() (phrase string, err error) {
-	words, err := matchInJSON(prepare(p.Text), p.Lang, p.FileLocation)
+	words, err := p.getWordsData(prepare(p.Text), p.Lang, p.FileLocation)
 	phrase = p.Text
 	for _, word := range words {
 		phrase = strings.Replace(phrase,word.BadWord,word.RelativeGood,-1)
@@ -98,30 +111,10 @@ func (p BadWordContent) ChangeToBetter() (phrase string, err error) {
 }
 
 func (p BadWordContent) CleanWith(value string) (phrase string, err error){
-	badwords, err := p.Search()
+	badWords, err := p.Search()
 	phrase = p.Text
-	for _, badword := range badwords {
-		phrase = strings.Replace(phrase,badword,strings.Repeat(value,len(badword)),-1)
+	for _, badWord := range badWords {
+		phrase = strings.Replace(phrase,badWord,strings.Repeat(value,len(badWord)),-1)
 	}
-	return
-}
-
-func (p BadWordContent) ListLanguagesByName() (content []string){
-	langs := openFile(p.FileLocation)
-
-	for _, item := range langs.Languages[0] {
-		content = append(content,item.Name)
-	}
-
-	return
-}
-
-func (p BadWordContent) ListLanguagesById() (content []string){
-	langs := openFile(p.FileLocation)
-
-	for _, item := range langs.Languages[0] {
-		content = append(content,item.Initial)
-	}
-
 	return
 }
