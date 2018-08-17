@@ -9,7 +9,7 @@ Feel free to create a pull request or make an issue to report bugs/request new f
 ## Installation
 Simple installs the package to your $GOPATH with the go tool from shell:
 ```
-$ go get -u github.com/go-sql-driver/mysql
+$ go get -u github.com/wiltonribeiro/badwords
 ```
 Make sure Git is installed on your machine and in your system's PATH.
 
